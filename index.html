@@ -215,8 +215,12 @@
     return "";
   }
   function ts(s) { var d = new Date(s); return isNaN(d) ? 0 : d.getTime(); }
-  function fmtDay(s) { var d = new Date(s); if (isNaN(d)) return "";
-    return d.toLocaleDateString(undefined, { month: "short", day: "numeric" }).toUpperCase(); }
+  function fmtDay(s) {
+    var d = new Date(s); if (isNaN(d)) return "";
+    var date = d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    var time = d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+    return (date + " · " + time).toUpperCase();
+  }
   function fmtStamp(s) { var d = new Date(s); if (isNaN(d)) return "";
     return d.toLocaleDateString(undefined, { month: "short", day: "numeric" }) + ", " +
            d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }); }
