@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Signal</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper:    #f5f4ef;
+    --card:     #fbfaf6;
+    --ink:      #16161d;
+    --ink-soft: #3a3a44;
+    --muted:    #76746a;
+    --rule:     #e0ddd2;
+    --accent:   #1f35d8;
+    --accent-deep: #16289f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: "Newsreader", Georgia, serif; font-size: 15px; line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1760px; margin: 0 auto; padding: 0 30px; }
+  .mono { font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace; }
+
+  /* masthead — compact horizontal band */
+  .mast { display: flex; align-items: baseline; justify-content: space-between;
+          gap: 20px; flex-wrap: wrap; padding: 26px 0 18px; border-bottom: 2px solid var(--ink); }
+  .brand { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+  .title { font-weight: 500; font-size: clamp(26px, 3vw, 38px); letter-spacing: -0.018em; margin: 0; }
+  .title .the { font-style: italic; font-weight: 400; color: var(--ink-soft); }
+  .tagline { font-style: italic; font-weight: 400; color: var(--ink-soft); font-size: 16px; }
+  .updated { font-family: "IBM Plex Mono", monospace; font-size: 11px; letter-spacing: 0.04em;
+             color: var(--muted); text-transform: uppercase; white-space: nowrap; }
+
+  /* controls */
+  .controls { padding: 16px 0 6px; }
+  .control-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .search { flex: 1 1 280px; min-width: 180px; font-family: "IBM Plex Mono", monospace; font-size: 12.5px;
+            padding: 9px 12px; background: transparent; border: 1px solid var(--rule); border-radius: 2px; color: var(--ink); }
+  .search:focus { outline: none; border-color: var(--accent); }
+  .search::placeholder { color: var(--muted); }
+  .seg-label { font-family: "IBM Plex Mono", monospace; font-size: 10.5px; letter-spacing: 0.06em;
+               text-transform: uppercase; color: var(--muted); margin-left: 4px; }
+  .seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 2px; overflow: hidden; }
+  .seg button { font-family: "IBM Plex Mono", monospace; font-size: 11.5px; letter-spacing: 0.03em;
+                text-transform: uppercase; padding: 8px 12px; border: 0; background: transparent;
+                color: var(--muted); cursor: pointer; border-right: 1px solid var(--rule); }
+  .seg button:last-child { border-right: 0; }
+  .seg button:hover { color: var(--ink); }
+  .seg button.on { background: var(--ink); color: var(--paper); }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 12px 0 2px; }
+  .chip { font-family: "IBM Plex Mono", monospace; font-size: 11px; letter-spacing: 0.02em;
+          padding: 5px 10px; border: 1px solid var(--rule); border-radius: 100px; background: transparent;
+          color: var(--muted); cursor: pointer; text-transform: uppercase; }
+  .chip:hover { border-color: var(--ink); color: var(--ink); }
+  .chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .count { font-family: "IBM Plex Mono", monospace; font-size: 11px; color: var(--muted);
+           padding: 12px 0 0; letter-spacing: 0.03em; }
+
+  .mast-note { flex-basis: 100%; width: 100%; margin: 10px 0 0; font-family: "IBM Plex Mono", monospace;
+               font-size: 10.5px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+  .foot { border-top: 2px solid var(--ink); margin-top: 6px; padding: 22px 0 72px; }
+  .foot .about { font-family: "Newsreader", Georgia, serif; font-style: italic; font-size: 14.5px;
+                 line-height: 1.55; color: var(--ink-soft); max-width: 64ch; margin: 0 0 10px; }
+  .foot .about strong { font-style: normal; font-weight: 500; color: var(--ink); }
+  .foot .meta { font-family: "IBM Plex Mono", monospace; font-size: 11px; letter-spacing: 0.03em;
+                color: var(--muted); margin: 0; }
+
+  /* the wall — explicit column containers so every column top aligns */
+  .wall { display: flex; gap: 16px; align-items: flex-start; padding: 16px 0 24px; }
+  .col { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+  .card { background: var(--card); border: 1px solid var(--rule); border-radius: 4px;
+          padding: 16px 17px 17px; transition: border-color .18s ease, transform .18s ease; }
+  .card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .dateline { font-family: "IBM Plex Mono", monospace; font-size: 10.5px; letter-spacing: 0.05em;
+              text-transform: uppercase; color: var(--muted); margin-bottom: 8px;
+              display: flex; gap: 7px; align-items: center; }
+  .dateline .src { color: var(--accent); font-weight: 600; }
+  .dateline .dot { color: var(--rule); }
+  .headline { margin: 0 0 8px; font-size: 17px; line-height: 1.22; font-weight: 500; letter-spacing: -0.01em; }
+  .headline a { color: var(--ink); text-decoration: none; }
+  .headline a:hover, .headline a:focus { color: var(--accent); }
+  .headline a .arrow { font-family: "IBM Plex Mono", monospace; font-size: 0.6em; color: var(--muted); }
+  .summary { margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--ink-soft); }
+  .quote { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--rule); }
+  .quote-text { position: relative; font-style: italic; font-size: 13px; line-height: 1.4; color: var(--ink);
+                padding-left: 14px; }
+  .quote-text::before { content: "\201C"; position: absolute; left: -2px; top: -2px; color: var(--accent);
+                        font-weight: 600; font-size: 20px; line-height: 1; }
+  .quote-by { font-family: "IBM Plex Mono", monospace; font-size: 10px; letter-spacing: 0.04em;
+              text-transform: uppercase; color: var(--muted); padding-left: 14px; margin-top: 6px; }
+
+  /* states */
+  .state { padding: 80px 0; text-align: center; color: var(--muted); }
+  .state h2 { font-weight: 400; font-style: italic; color: var(--ink-soft); font-size: 24px; margin: 0 0 8px; }
+  .state p { margin: 0 0 18px; font-size: 14px; }
+  .load-btn { font-family: "IBM Plex Mono", monospace; font-size: 13px; letter-spacing: 0.03em;
+              padding: 10px 18px; background: var(--accent); color: #fff; border: 0; border-radius: 2px; cursor: pointer; }
+  .load-btn:hover { background: var(--accent-deep); }
+  .hidden { display: none !important; }
+
+  @keyframes rise { from { opacity: 0; } to { opacity: 1; } }
+  .card { animation: rise .4s ease both; }
+  @media (prefers-reduced-motion: reduce) { .card { animation: none; transition: none; } }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* responsive collapse — overrides the column toggle on smaller screens */
+  /* iPad / tablet: 2-column (handled in JS); the column toggle isn't useful here */
+  @media (max-width: 1000px) {
+    #cols, .seg-label { display: none; }
+  }
+  /* phone: single-column editorial feed with the hero pull-quote */
+  @media (max-width: 640px) {
+    body { font-size: 16px; }
+    .wrap { padding: 0 20px; }
+    .mast { padding: 30px 0 16px; }
+    .wall { gap: 0; padding-top: 8px; }
+    .col { gap: 0; }
+    .card { background: transparent; border: 0; border-top: 1px solid var(--rule);
+            border-radius: 0; padding: 26px 0 28px; }
+    .col .card:first-child { border-top: 0; }
+    .card:hover { transform: none; border-color: var(--rule); }
+    .dateline { font-size: 11px; margin-bottom: 10px; }
+    .headline { font-size: 23px; line-height: 1.2; margin-bottom: 10px; }
+    .summary { font-size: 17px; line-height: 1.6; }
+    .quote { border-top: 0; margin-top: 16px; padding-top: 2px; }
+    .quote-text { font-size: 19px; line-height: 1.45; padding-left: 24px; }
+    .quote-text::before { font-size: 60px; top: -16px; left: -4px; }
+    .quote-by { font-size: 11px; padding-left: 24px; margin-top: 9px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="mast">
+    <div class="brand">
+      <h1 class="title"><span class="the">The</span> Signal</h1>
+      <span class="tagline">what AI is saying</span>
+    </div>
+    <div class="updated mono" id="updated"></div>
+    <p class="mast-note mono">Summaries are AI-generated · every headline links to the original.</p>
+  </header>
+
+  <section class="controls" id="controls" hidden>
+    <div class="control-row">
+      <input type="search" class="search" id="search" placeholder="Search stories…" aria-label="Search stories">
+      <div class="seg" id="window" role="group" aria-label="Time window">
+        <button data-win="day" class="on">24 h</button>
+        <button data-win="day2">48 h</button>
+        <button data-win="week">Week</button>
+        <button data-win="all">All</button>
+      </div>
+      <div class="seg" id="cols" role="group" aria-label="Columns">
+        <button data-cols="2">2</button>
+        <button data-cols="3" class="on">3</button>
+        <button data-cols="4">4</button>
+      </div>
+      <span class="seg-label">cols</span>
+    </div>
+    <div class="chips" id="chips"></div>
+    <div class="count mono" id="count"></div>
+  </section>
+
+  <main class="wall" id="wall"></main>
+
+  <footer class="foot" id="foot" hidden>
+    <p class="about">A curated read of notable AI stories. Summaries are written by an automated pipeline and condensed for skimming — <strong>every headline links to the original, which is always the better read.</strong> Quotes are excerpted and attributed.</p>
+    <p class="meta mono"><span id="footCount"></span></p>
+  </footer>
+
+  <div class="state" id="state">
+    <h2 id="stateTitle">Loading the feed…</h2>
+    <p id="stateMsg">Fetching the latest stories.</p>
+    <button class="load-btn hidden" id="loadBtn">Choose a CSV</button>
+    <input type="file" id="fileInput" accept=".csv,text/csv" class="hidden">
+  </div>
+
+</div>
+
+<script>
+(function () {
+  var CSV_URL = "./ai-articles.csv";
+
+  var all = [], view = [], query = "", win = "day", srcFilter = "all", chosenCols = "3", lastFetchTs = 0;
+
+  function effectiveCols() {
+    var w = window.innerWidth;
+    if (w <= 640) return 1;
+    if (w <= 1000) return 2;
+    return parseInt(chosenCols, 10) || 3;
+  }
+
+  var $ = function (id) { return document.getElementById(id); };
+  var wall = $("wall"), state = $("state"), controls = $("controls"), foot = $("foot");
+  var chipsEl = $("chips"), countEl = $("count"), updatedEl = $("updated");
+  var searchEl = $("search"), windowEl = $("window"), colsEl = $("cols");
+  var fileInput = $("fileInput"), loadBtn = $("loadBtn");
+
+  var decoder = document.createElement("textarea");
+  function decode(s) { if (s == null) return ""; decoder.innerHTML = String(s); return decoder.value; }
+
+  function field(row, names) {
+    for (var i = 0; i < names.length; i++) {
+      var k = names[i];
+      if (row[k] != null && String(row[k]).trim() !== "") return String(row[k]).trim();
+    }
+    return "";
+  }
+  function ts(s) { var d = new Date(s); return isNaN(d) ? 0 : d.getTime(); }
+  function fmtDay(s) { var d = new Date(s); if (isNaN(d)) return "";
+    return d.toLocaleDateString(undefined, { month: "short", day: "numeric" }).toUpperCase(); }
+  function fmtStamp(s) { var d = new Date(s); if (isNaN(d)) return "";
+    return d.toLocaleDateString(undefined, { month: "short", day: "numeric" }) + ", " +
+           d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }); }
+  function domainName(link) { try { return new URL(link).hostname.replace(/^www\./, ""); } catch (e) { return ""; } }
+
+  function normalize(rows) {
+    var out = [];
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i];
+      var link = field(r, ["link", "url"]);
+      if (!link || link === "__seed__") continue;
+      var when = field(r, ["published_at", "pubDate", "published", "date"]);
+      var fetched = field(r, ["fetched_at", "fetched"]);
+      out.push({
+        link: link,
+        title: decode(field(r, ["title", "headline"])) || link,
+        source: decode(field(r, ["source"])) || domainName(link),
+        when: when, fetched: fetched, whenTs: ts(when) || ts(fetched),
+        summary: decode(field(r, ["summary", "description"])),
+        quote: decode(field(r, ["quote"]))
+      });
+    }
+    out.sort(function (a, b) { return b.whenTs - a.whenTs; });
+    return out;
+  }
+
+  function ingest(rows) {
+    all = normalize(rows);
+    if (!all.length) { showState("Nothing to show", "The file loaded but had no stories.", true); return; }
+    state.classList.add("hidden");
+    controls.hidden = false; foot.hidden = false;
+    var newest = all.reduce(function (m, x) { var t = ts(x.fetched) || x.whenTs; return t > m ? t : m; }, 0);
+    lastFetchTs = newest;
+    updatedEl.textContent = newest ? "Updated " + fmtStamp(newest) : "";
+    buildChips();
+    render();
+  }
+
+  function fromFile(file) {
+    Papa.parse(file, { header: true, skipEmptyLines: true, complete: function (res) { ingest(res.data); } });
+  }
+  function fetchFeed() {
+    fetch(CSV_URL, { cache: "no-store" })
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); })
+      .then(function (text) { ingest(Papa.parse(text, { header: true, skipEmptyLines: true }).data); })
+      .catch(function () { showState("Couldn’t reach the feed", "Load a CSV to preview it locally.", true); });
+  }
+
+  function windowStart() {
+    if (win === "all") return 0;
+    var anchor = lastFetchTs || Date.now();              // anchor to the last pipeline fetch
+    var hours = win === "day" ? 24 : win === "day2" ? 48 : 24 * 7;
+    return anchor - hours * 3600 * 1000;
+  }
+  function compute() {
+    var start = windowStart(), q = query.toLowerCase();
+    view = all.filter(function (x) {
+      if (x.whenTs && x.whenTs < start) return false;
+      if (srcFilter !== "all" && x.source !== srcFilter) return false;
+      if (q && (x.title + " " + x.summary + " " + x.quote + " " + x.source).toLowerCase().indexOf(q) === -1) return false;
+      return true;
+    });
+  }
+
+  function buildChips() {
+    var set = {};
+    all.forEach(function (x) { if (x.source) set[x.source] = true; });
+    var names = Object.keys(set).sort(function (a, b) { return a.localeCompare(b); });
+    chipsEl.innerHTML = "";
+    chipsEl.appendChild(chip("All sources", "all"));
+    names.forEach(function (n) { chipsEl.appendChild(chip(n, n)); });
+  }
+  function chip(label, val) {
+    var b = document.createElement("button");
+    b.className = "chip" + (srcFilter === val ? " on" : "");
+    b.textContent = label;
+    b.addEventListener("click", function () { srcFilter = val; refreshChips(); render(); });
+    return b;
+  }
+  function refreshChips() {
+    chipsEl.querySelectorAll(".chip").forEach(function (b, i) {
+      var val = i === 0 ? "all" : b.textContent;
+      b.classList.toggle("on", val === srcFilter);
+    });
+  }
+
+  function splitQuote(raw) {
+    var s = raw.trim();
+    var m = s.match(/^\s*[\u201C"]?([\s\S]*)[\u201D"]\s*[\u2014\u2013\-]\s*(.+?)\s*$/);
+    if (m && m[2] && m[2].length < 120)
+      return { text: m[1].replace(/^[\u201C\u201D"\s]+|[\u201C\u201D"\s]+$/g, "").trim(), by: m[2].trim() };
+    return { text: s.replace(/^[\u201C\u201D"\s]+|[\u201C\u201D"\s]+$/g, "").trim(), by: "" };
+  }
+
+  function card(x, i) {
+    var el = document.createElement("article");
+    el.className = "card";
+
+    var dl = document.createElement("div"); dl.className = "dateline";
+    var src = document.createElement("span"); src.className = "src"; src.textContent = x.source || "—"; dl.appendChild(src);
+    var day = fmtDay(x.when || x.fetched);
+    if (day) { var dot = document.createElement("span"); dot.className = "dot"; dot.textContent = "—"; dl.appendChild(dot);
+               var dd = document.createElement("span"); dd.textContent = day; dl.appendChild(dd); }
+    el.appendChild(dl);
+
+    var h = document.createElement("h2"); h.className = "headline";
+    var a = document.createElement("a"); a.href = x.link; a.target = "_blank"; a.rel = "noopener noreferrer";
+    a.setAttribute("data-goatcounter-click", x.title.slice(0, 100));
+    a.setAttribute("data-goatcounter-title", (x.source ? x.source + ": " : "") + x.title);
+    a.textContent = x.title;
+    var ar = document.createElement("span"); ar.className = "arrow"; ar.textContent = " ↗"; a.appendChild(ar);
+    h.appendChild(a); el.appendChild(h);
+
+    if (x.summary) { var p = document.createElement("p"); p.className = "summary"; p.textContent = x.summary; el.appendChild(p); }
+
+    if (x.quote) {
+      var q = document.createElement("div"); q.className = "quote";
+      var parsed = splitQuote(x.quote);
+      var qt = document.createElement("p"); qt.className = "quote-text"; qt.textContent = parsed.text; q.appendChild(qt);
+      if (parsed.by) { var by = document.createElement("div"); by.className = "quote-by"; by.textContent = parsed.by; q.appendChild(by); }
+      el.appendChild(q);
+    }
+    return el;
+  }
+
+  function render() {
+    compute();
+    wall.innerHTML = "";
+    if (!view.length) {
+      wall.style.display = "block";
+      wall.innerHTML = '<div class="state"><h2>Nothing matches</h2><p class="mono">Clear the search or widen the window.</p></div>';
+    } else {
+      wall.style.display = "flex";
+      var n = effectiveCols(), cols = [], c;
+      for (c = 0; c < n; c++) { var d = document.createElement("div"); d.className = "col"; cols.push(d); wall.appendChild(d); }
+      view.forEach(function (x, i) { cols[i % n].appendChild(card(x, i)); });
+      if (window.goatcounter && window.goatcounter.bind_events) window.goatcounter.bind_events();
+    }
+    var n = view.length;
+    countEl.textContent = n + (n === 1 ? " story" : " stories") +
+      (win === "day" ? " · past 24h" : win === "day2" ? " · past 48h" : win === "week" ? " · past 7 days" : " · all");
+    $("footCount").textContent = all.length + " stories indexed";
+  }
+
+  function showState(title, msg, allowLoad) {
+    state.classList.remove("hidden");
+    $("stateTitle").textContent = title; $("stateMsg").textContent = msg;
+    loadBtn.classList.toggle("hidden", !allowLoad);
+    controls.hidden = true; foot.hidden = true; wall.innerHTML = "";
+  }
+
+  searchEl.addEventListener("input", function (e) { query = e.target.value; render(); });
+  windowEl.addEventListener("click", function (e) {
+    var b = e.target.closest("button"); if (!b) return;
+    win = b.dataset.win;
+    windowEl.querySelectorAll("button").forEach(function (x) { x.classList.toggle("on", x === b); });
+    render();
+  });
+  colsEl.addEventListener("click", function (e) {
+    var b = e.target.closest("button"); if (!b) return;
+    chosenCols = b.dataset.cols;
+    colsEl.querySelectorAll("button").forEach(function (x) { x.classList.toggle("on", x === b); });
+    render();
+  });
+  var resizeTimer;
+  window.addEventListener("resize", function () {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function () { if (all.length) render(); }, 150);
+  });
+  loadBtn.addEventListener("click", function () { fileInput.click(); });
+  fileInput.addEventListener("change", function (e) { var f = e.target.files[0]; if (f) fromFile(f); e.target.value = ""; });
+  document.addEventListener("dragover", function (e) { e.preventDefault(); });
+  document.addEventListener("drop", function (e) {
+    e.preventDefault();
+    var f = e.dataTransfer.files[0];
+    if (f && /\.csv$/i.test(f.name)) fromFile(f);
+  });
+
+  fetchFeed();
+})();
+</script>
+
+<!-- Visitor analytics (GoatCounter) — cookie-less, no consent banner needed.
+     Replace YOURCODE below with your own (e.g. https://aisignal.goatcounter.com/count).
+     Until you do, this line does nothing. -->
+<script data-goatcounter="https://aisignal.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"
+        onload="window.goatcounter&&window.goatcounter.bind_events&&window.goatcounter.bind_events()"></script>
+</body>
+</html>
