@@ -164,6 +164,7 @@
       <div class="seg" id="window" role="group" aria-label="Time window">
         <button data-win="day" class="on">24 h</button>
         <button data-win="day2">48 h</button>
+        <button data-win="day3">72 h</button>
         <button data-win="week">Week</button>
         <button data-win="all">All</button>
       </div>
@@ -283,7 +284,7 @@
   function windowStart() {
     if (win === "all") return 0;
     var anchor = lastFetchTs || Date.now();              // anchor to the last pipeline fetch
-    var hours = win === "day" ? 24 : win === "day2" ? 48 : 24 * 7;
+    var hours = win === "day" ? 24 : win === "day2" ? 48 : win === "day3" ? 72 : 24 * 7;
     return anchor - hours * 3600 * 1000;
   }
   function compute() {
@@ -376,7 +377,7 @@
     }
     var n2 = view.length;
     countEl.textContent = n2 + (n2 === 1 ? " story" : " stories") +
-      (win === "day" ? " · past 24h" : win === "day2" ? " · past 48h" : win === "week" ? " · past 7 days" : " · all");
+      (win === "day" ? " · past 24h" : win === "day2" ? " · past 48h" : win === "day3" ? " · past 72h" : win === "week" ? " · past 7 days" : " · all");
     $("footCount").textContent = all.length + " stories indexed";
 
     var more = $("more"), remaining = view.length - shown;
@@ -423,6 +424,20 @@
     var f = e.dataTransfer.files[0];
     if (f && /\.csv$/i.test(f.name)) fromFile(f);
   });
+
+  // Day-aware default window, anchored to Eastern (matches when the newsletter sends):
+  //   Monday  -> 72h (reaches back to Friday; Monday's own batch isn't out yet at 6 AM)
+  //   Sunday  -> 48h (reaches back to Friday)
+  //   Tue-Sat -> 24h (24h already captures the prior weekday, incl. Friday on a Saturday)
+  // Only sets the INITIAL window; the buttons still let visitors pick any range.
+  function setDefaultWindow() {
+    var dow = new Date().toLocaleDateString("en-US", { weekday: "short", timeZone: "America/Toronto" });
+    win = dow === "Mon" ? "day3" : dow === "Sun" ? "day2" : "day";
+    windowEl.querySelectorAll("button").forEach(function (b) {
+      b.classList.toggle("on", b.dataset.win === win);
+    });
+  }
+  setDefaultWindow();
 
   fetchFeed();
 })();
