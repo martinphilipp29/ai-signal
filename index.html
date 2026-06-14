@@ -375,9 +375,9 @@
       slice.forEach(function (x, i) { cols[i % n].appendChild(card(x, i)); });
       if (window.goatcounter && window.goatcounter.bind_events) window.goatcounter.bind_events();
     }
-    var n2 = view.length;
-    countEl.textContent = n2 + (n2 === 1 ? " story" : " stories") +
-      (win === "day" ? " · past 24h" : win === "day2" ? " · past 48h" : win === "day3" ? " · past 72h" : win === "week" ? " · past 7 days" : " · all");
+    var n2 = view.length, rendered = Math.min(shown, n2);
+    var label = win === "day" ? " · past 24h" : win === "day2" ? " · past 48h" : win === "day3" ? " · past 72h" : win === "week" ? " · past 7 days" : " · all";
+    countEl.textContent = (rendered < n2 ? "showing " + rendered + " of " + n2 : n2 + (n2 === 1 ? " story" : " stories")) + label;
     $("footCount").textContent = all.length + " stories indexed";
 
     var more = $("more"), remaining = view.length - shown;
