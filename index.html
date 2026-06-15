@@ -3,11 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://gc.zgo.at; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://aisignal.goatcounter.com; object-src 'none'; base-uri 'self'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <title>AI Signal</title>
 <link rel="icon" type="image/png" sizes="180x180" href="favicon.png">
 <link rel="apple-touch-icon" href="favicon.png">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNyIgZmlsbD0iIzFmMzVkOCIvPjxnIGZpbGw9IiNmZmZmZmYiPjxyZWN0IHg9IjUiIHk9IjE5IiB3aWR0aD0iNCIgaGVpZ2h0PSI3IiByeD0iMSIvPjxyZWN0IHg9IjExIiB5PSIxNSIgd2lkdGg9IjQiIGhlaWdodD0iMTEiIHJ4PSIxIi8+PHJlY3QgeD0iMTciIHk9IjExIiB3aWR0aD0iNCIgaGVpZ2h0PSIxNSIgcng9IjEiLz48cmVjdCB4PSIyMyIgeT0iNyIgd2lkdGg9IjQiIGhlaWdodD0iMTkiIHJ4PSIxIi8+PC9nPjwvc3ZnPgo=">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js" integrity="sha512-dfX5uYVXzyU8+KHqj8bjo7UkOdg18PaOtpa48djpNbZHwExddghZ+ZmzWT06R5v6NSk3ZUfsH6FNEDepLx9hPQ==" crossorigin="anonymous"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -237,6 +239,10 @@
     return d.toLocaleDateString(undefined, { month: "short", day: "numeric" }) + ", " +
            d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }); }
   function domainName(link) { try { return new URL(link).hostname.replace(/^www\./, ""); } catch (e) { return ""; } }
+  function safeUrl(u) {
+    try { var p = new URL(u, location.href).protocol; return (p === "https:" || p === "http:") ? u : ""; }
+    catch (e) { return ""; }
+  }
 
   function normalize(rows) {
     var out = [];
@@ -339,12 +345,18 @@
     el.appendChild(dl);
 
     var h = document.createElement("h2"); h.className = "headline";
-    var a = document.createElement("a"); a.href = x.link; a.target = "_blank"; a.rel = "noopener noreferrer";
-    a.setAttribute("data-goatcounter-click", x.title.slice(0, 100));
-    a.setAttribute("data-goatcounter-title", (x.source ? x.source + ": " : "") + x.title);
-    a.textContent = x.title;
-    var ar = document.createElement("span"); ar.className = "arrow"; ar.textContent = " ↗"; a.appendChild(ar);
-    h.appendChild(a); el.appendChild(h);
+    var href = safeUrl(x.link);
+    if (href) {
+      var a = document.createElement("a"); a.href = href; a.target = "_blank"; a.rel = "noopener noreferrer";
+      a.setAttribute("data-goatcounter-click", x.title.slice(0, 100));
+      a.setAttribute("data-goatcounter-title", (x.source ? x.source + ": " : "") + x.title);
+      a.textContent = x.title;
+      var ar = document.createElement("span"); ar.className = "arrow"; ar.textContent = " ↗"; a.appendChild(ar);
+      h.appendChild(a);
+    } else {
+      h.textContent = x.title;
+    }
+    el.appendChild(h);
 
     if (x.summary) { var p = document.createElement("p"); p.className = "summary"; p.textContent = x.summary; el.appendChild(p); }
 
