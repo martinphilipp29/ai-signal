@@ -281,7 +281,7 @@
     Papa.parse(file, { header: true, skipEmptyLines: true, complete: function (res) { ingest(res.data); } });
   }
   function fetchFeed() {
-    fetch(CSV_URL, { cache: "no-store" })
+    fetch(CSV_URL + "?t=" + Date.now(), { cache: "no-store" })
       .then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); })
       .then(function (text) { ingest(Papa.parse(text, { header: true, skipEmptyLines: true }).data); })
       .catch(function () { showState("Couldn’t reach the feed", "Load a CSV to preview it locally.", true); });
@@ -333,7 +333,7 @@
     return { text: s.replace(/^[\u201C\u201D"\s]+|[\u201C\u201D"\s]+$/g, "").trim(), by: "" };
   }
 
-  function card(x, i, showQuote) {
+  function card(x, i) {
     var el = document.createElement("article");
     el.className = "card";
 
@@ -360,7 +360,7 @@
 
     if (x.summary) { var p = document.createElement("p"); p.className = "summary"; p.textContent = x.summary; el.appendChild(p); }
 
-    if (x.quote && showQuote) {
+    if (x.quote) {
       var q = document.createElement("div"); q.className = "quote";
       var parsed = splitQuote(x.quote);
       var qt = document.createElement("p"); qt.className = "quote-text"; qt.textContent = parsed.text; q.appendChild(qt);
@@ -384,15 +384,7 @@
       var slice = view.slice(0, shown);
       var n = effectiveCols(), cols = [], c;
       for (c = 0; c < n; c++) { var d = document.createElement("div"); d.className = "col"; cols.push(d); wall.appendChild(d); }
-      var seenQuotes = {};
-      slice.forEach(function (x, i) {
-        var showQuote = false;
-        if (x.quote) {
-          var qkey = splitQuote(x.quote).text.toLowerCase().replace(/\s+/g, " ").trim();
-          if (qkey && !seenQuotes[qkey]) { seenQuotes[qkey] = true; showQuote = true; }
-        }
-        cols[i % n].appendChild(card(x, i, showQuote));
-      });
+      slice.forEach(function (x, i) { cols[i % n].appendChild(card(x, i)); });
       if (window.goatcounter && window.goatcounter.bind_events) window.goatcounter.bind_events();
     }
     var n2 = view.length, rendered = Math.min(shown, n2);
@@ -467,7 +459,7 @@
      Replace YOURCODE below with your own (e.g. https://aisignal.goatcounter.com/count).
      Until you do, this line does nothing. -->
 <script data-goatcounter="https://aisignal.goatcounter.com/count"
-        async src="https://gc.zgo.at/count.js"
+        async src="//gc.zgo.at/count.js"
         onload="window.goatcounter&&window.goatcounter.bind_events&&window.goatcounter.bind_events()"></script>
 </body>
 </html>
